@@ -10,7 +10,78 @@
 </head>
 
 <?php
-  $result = null;
+  $OPERATOR = [
+  'addition' => '+',
+  'subtraction' => '-',
+  'multiplication' => '*',
+  'division' => '/'
+];
+$EQUALITY = '=';
+
+function calculator($numA, $numB, $operator) {
+  switch ($operator) {
+    case '+':
+      $result = $numA + $numB;
+      break;
+    case '-':
+      $result = $numA - $numB;
+      break;
+    case '*':
+      $result = $numA * $numB;
+      break;
+    default:
+      if ($numB != 0) {
+        $result = $numA / $numB;
+      } else {
+        $result = 'Division by zero';
+      }
+  }
+  return $result;
+}
+
+function inputParser()
+{
+  global $OPERATOR;
+
+  $userInput = trim($_POST['display']);
+  $numbers = null;
+  $operator = null;
+
+  foreach ($OPERATOR as $operator_sign) {
+    if (strpos($userInput, $operator_sign) != false) {
+      $numbers = explode($operator_sign, $userInput);
+      $operator = $operator_sign;
+      break;
+    }
+  }
+  unset($operator_sign);
+
+  return [
+    intval($numbers['0']), 
+    intval($numbers['1']),
+    $operator
+  ];
+}
+
+function equalityHandler() {
+  global $EQUALITY;
+
+  if (!isset($_POST['options'])) {
+    return null;
+  }
+
+  if ($_POST['options'] !== $EQUALITY) {
+    return null;
+  }
+
+  if (!isset($_POST['display'])) {
+    return null;
+  }
+
+  [$numA, $numB, $operator] = inputParser();
+  return calculator($numA, $numB, $operator);
+}
+$result = equalityHandler();
 ?>
 
 <body>
