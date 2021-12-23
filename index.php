@@ -16,9 +16,43 @@
   'multiplication' => '*',
   'division' => '/'
 ];
-$EQUALITY = '=';
+$errorMessage = null;
+
+function isNumberValid($numbers)
+{
+  global $errorMessage;
+  $MAX = 9999999999.0;
+  $MIN = -999999999.0;
+
+  if (count($numbers) != 2) {
+    $errorMessage = 'Wrong input format.';
+    return false;
+  }
+
+  $numA = $numbers['0'];
+  $numB = $numbers['1'];
+  if (!is_numeric($numA) || !is_numeric($numB)) {
+    $errorMessage = 'Wrong input format.';
+    return false;
+  }
+
+  $numA = floatval($numA);
+  $numB = floatval($numB);
+  if ($numA > $MAX || $numB > $MAX) {
+    $errorMessage = 'Number is too big. Should smaller than '.$MAX;
+    return false;
+  }
+
+  if ($numA < $MIN || $numB < $MIN) {
+    $errorMessage = 'Number is too small. Should bigger than '.$MIN;
+    return false;
+  }
+  return true;
+}
 
 function calculator($numA, $numB, $operator) {
+  global $errorMessage;
+
   switch ($operator) {
     case '+':
       $result = $numA + $numB;
@@ -33,7 +67,8 @@ function calculator($numA, $numB, $operator) {
       if ($numB != 0) {
         $result = $numA / $numB;
       } else {
-        $result = 'Division by zero';
+        $result = 'undefined';
+        $errorMessage = 'Division by zero.';
       }
   }
   return $result;
@@ -57,14 +92,13 @@ function inputParser()
   unset($operator_sign);
 
   return [
-    intval($numbers['0']), 
-    intval($numbers['1']),
+    $numbers,
     $operator
   ];
 }
 
 function equalityHandler() {
-  global $EQUALITY;
+  $EQUALITY = '=';
 
   if (!isset($_POST['options'])) {
     return null;
@@ -78,8 +112,15 @@ function equalityHandler() {
     return null;
   }
 
-  [$numA, $numB, $operator] = inputParser();
-  return calculator($numA, $numB, $operator);
+  [$numbers, $operator] = inputParser();
+  
+  if (isNumberValid($numbers)) {
+    $numA = floatval($numbers['0']);
+    $numB = floatval($numbers['1']);
+    return calculator($numA, $numB, $operator);
+  } else {
+    return $_POST['display'];
+  }
 }
 $result = equalityHandler();
 ?>
@@ -90,6 +131,13 @@ $result = equalityHandler();
       <a class="navbar-brand" href="/index.php">簡易計算機</a>
     </div>
   </nav>
+
+  <?php if($errorMessage != null) : ?>
+    <div class="alert alert-warning" role="alert">
+      <?php echo $errorMessage ?>
+    </div>
+  <?php endif; ?>
+
   <form class="container" method="post" action="index.php">
     <div class="row g-3">
       <div class="col">
