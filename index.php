@@ -6,6 +6,28 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+  <style>
+    .container {
+      width: 250px;
+    }
+    .row {
+      margin-top: 3px;
+    }
+    .col {
+      margin-top: 0px;
+    }
+    #display {
+      width: 213px;
+      font-size: 20px;
+    }
+    .btn {
+      width: 50px;
+      height: 50px;
+      text-align: center;
+      line-height: 35px;
+      font-size: 20px;
+    }
+  </style>
   <title>簡易計算機</title>
 </head>
 
@@ -113,7 +135,7 @@ function equalityHandler() {
   }
 
   [$numbers, $operator] = inputParser();
-  
+
   if (isNumberValid($numbers)) {
     $numA = floatval($numbers['0']);
     $numB = floatval($numbers['1']);
@@ -138,7 +160,7 @@ $result = equalityHandler();
     </div>
   <?php endif; ?>
 
-  <form class="container" method="post" action="index.php">
+  <form class="container mt-3" method="post" action="index.php">
     <div class="row g-3">
       <div class="col">
         <input 
@@ -206,6 +228,8 @@ $result = equalityHandler();
 
     <div class="row g-3">
       <div class="col">
+        <a class="btn btn-danger" href="/index.php">C</a>
+
         <input type="radio" class="btn-check" name="options" id="zero" value="0" autocomplete="off" onchange="this.form.submit();">
         <label class="btn btn-secondary" for="zero">0</label>
 
@@ -214,12 +238,6 @@ $result = equalityHandler();
 
         <input type="radio" class="btn-check" name="options" id="addition" value="+" autocomplete="off" onchange="this.form.submit();">
         <label class="btn btn-warning" for="addition">+</label>
-      </div>
-    </div>
-
-    <div class="row g-3">
-      <div class="col">
-        <a class="btn btn-danger" href="/index.php">重新填寫</a>
       </div>
     </div>
   </form>
