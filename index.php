@@ -47,14 +47,14 @@ function isNumberValid($numbers)
   $MIN = -999999999.0;
 
   if (count($numbers) != 2) {
-    $errorMessage = 'Wrong input format.';
+    $errorMessage = 'Wrong input format, accept only one operator.';
     return false;
   }
 
   $numA = $numbers['0'];
   $numB = $numbers['1'];
   if (!is_numeric($numA) || !is_numeric($numB)) {
-    $errorMessage = 'Wrong input format.';
+    $errorMessage = 'Wrong input format, accept only one operator.';
     return false;
   }
 
