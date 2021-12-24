@@ -32,43 +32,62 @@
 </head>
 
 <?php
-  $OPERATOR = [
+session_start();
+
+// data
+$OPERATOR = [
   'addition' => '+',
   'subtraction' => '-',
   'multiplication' => '*',
   'division' => '/'
 ];
+$STATUS = [
+  'waitForFirstNumberComplete' => 0,
+  'waitForSecondNumberComplete' => 1,
+  'afterEquality' => 2
+];
+$displayNumber = null;
 $errorMessage = null;
 
-function isNumberValid($numbers)
-{
+if (!isset($_SESSION['numericInput'])) {
+  $_SESSION['numericInput'] = ['', ''];
+}
+
+if (!isset($_SESSION['operatorInput'])) {
+  $_SESSION['operatorInput'] = '';
+}
+
+if (!isset($_SESSION['calculatedResult'])) {
+  $_SESSION['calculatedResult'] = null;
+}
+
+if (!isset($_SESSION['currentStatus'])) {
+  $_SESSION['currentStatus'] = $STATUS['waitForFirstNumberComplete'];
+}
+
+
+// controller
+function isNumberValid($numericStr) {
   global $errorMessage;
-  $MAX = 9999999999.0;
-  $MIN = -999999999.0;
 
-  if (count($numbers) != 2) {
-    $errorMessage = 'Wrong input format, accept only one operator.';
+  if (!is_numeric($numericStr) && $numericStr !== '') {
+    $errorMessage = 'Please enter a number.';
     return false;
   }
 
-  $numA = $numbers['0'];
-  $numB = $numbers['1'];
-  if (!is_numeric($numA) || !is_numeric($numB)) {
-    $errorMessage = 'Wrong input format, accept only one operator.';
+  $num = floatval($numericStr);
+  $max = 9999999999.0;
+  $min = -999999999.0;
+  if ($num > $max) {
+    $errorMessage = 'Number is too big. Should smaller than '.$max;
     return false;
   }
 
-  $numA = floatval($numA);
-  $numB = floatval($numB);
-  if ($numA > $MAX || $numB > $MAX) {
-    $errorMessage = 'Number is too big. Should smaller than '.$MAX;
+  if ($num < $min) {
+    $errorMessage = 'Number is too small. Should bigger than '.$min;
     return false;
   }
 
-  if ($numA < $MIN || $numB < $MIN) {
-    $errorMessage = 'Number is too small. Should bigger than '.$MIN;
-    return false;
-  }
   return true;
 }
 
@@ -89,62 +108,183 @@ function calculator($numA, $numB, $operator) {
       if ($numB != 0) {
         $result = $numA / $numB;
       } else {
-        $result = 'undefined';
+        $result = 0;
         $errorMessage = 'Division by zero.';
       }
   }
   return $result;
 }
 
-function inputParser()
-{
-  global $OPERATOR;
-
-  $userInput = trim($_POST['display']);
-  $numbers = null;
-  $operator = null;
-
-  foreach ($OPERATOR as $operator_sign) {
-    if (strpos($userInput, $operator_sign) != false) {
-      $numbers = explode($operator_sign, $userInput);
-      $operator = $operator_sign;
-      break;
-    }
-  }
-  unset($operator_sign);
-
-  return [
-    $numbers,
-    $operator
-  ];
+function getNumericA() {
+  return $_SESSION['numericInput']['0'];
+}
+function updateNumericA($string) {
+    $_SESSION['numericInput']['0'] = $string;
 }
 
-function equalityHandler() {
-  $EQUALITY = '=';
+function getNumericB() {
+  return $_SESSION['numericInput']['1'];
+}
+function updateNumericB($string) {
+    $_SESSION['numericInput']['1'] = $string;
+}
 
+function getOperator() {
+  return $_SESSION['operatorInput'];
+}
+function updateOperator($string) {
+  $_SESSION['operatorInput'] = $string;
+}
+
+function getStatus() {
+  return $_SESSION['currentStatus'];
+}
+function updateStatus($integer) {
+  $_SESSION['currentStatus'] = $integer;
+}
+
+function getResult() {
+  return $_SESSION['calculatedResult'];
+}
+function updateResult($value) {
+  $_SESSION['calculatedResult'] = $value;
+}
+
+function controller() {
   if (!isset($_POST['options'])) {
     return null;
   }
 
-  if ($_POST['options'] !== $EQUALITY) {
+  global $STATUS;
+  global $OPERATOR;
+  global $displayNumber;
+  global $errorMessage;
+  $equality_sign = '=';
+  $userInput = $_POST['options'];
+
+  if ($userInput === 'reset') {
+    $isSuccess = session_destroy();
+    if (!$isSuccess) {
+      $errorMessage = 'Something wrong, please click the "C" button again.';
+    }
     return null;
   }
 
-  if (!isset($_POST['display'])) {
+  // Status: Wait For First Number Complete
+  if (getStatus() === $STATUS['waitForFirstNumberComplete']) {
+    if (is_numeric($userInput)) {
+      updateNumericA(getNumericA() . $userInput);
+      $displayNumber = getNumericA();
+      return null;
+    }
+
+    if(!isNumberValid(getNumericA())) {
+      updateNumericA('');
+      $displayNumber = 0;
+      return null;
+    }
+
+    
+    if ($userInput === $equality_sign) {
+      $numA = floatval(getNumericA());
+      updateResult($numA);
+      updateNumericA('');
+      updateStatus($STATUS['afterEquality']);
+      $displayNumber = getResult();
+      return null;
+    }
+
+    foreach($OPERATOR as $operator) {
+      if ($userInput === $operator) {
+        updateOperator($operator);
+        updateStatus($STATUS['waitForSecondNumberComplete']);
+        $displayNumber = getNumericA();
+        return null;
+      }
+    }
     return null;
   }
 
-  [$numbers, $operator] = inputParser();
+  // Status: Wait For Second Number Complete
+  if (getStatus() === $STATUS['waitForSecondNumberComplete']) {
+    if (is_numeric($userInput)) {
+      updateNumericB(getNumericB() . $userInput);
+      $displayNumber = getNumericB();
+      return null;
+    }
 
-  if (isNumberValid($numbers)) {
-    $numA = floatval($numbers['0']);
-    $numB = floatval($numbers['1']);
-    return calculator($numA, $numB, $operator);
-  } else {
-    return $_POST['display'];
+    if (!isNumberValid(getNumericB())) {
+      updateNumericB('');
+      $displayNumber = 0;
+      return null;
+    }
+
+    $numA = floatval(getNumericA());
+    $numB = floatval(getNumericB());
+    $result = calculator($numA, $numB, getOperator());
+    updateResult($result);
+    updateNumericB('');
+    if ($userInput === $equality_sign) {
+      updateNumericA('');
+      updateOperator('');
+      updateStatus($STATUS['afterEquality']);
+      $displayNumber = $result;
+    }
+
+    foreach($OPERATOR as $operator) {
+      if ($userInput === $operator) {
+        updateNumericA(strval($result));
+        updateOperator($operator);
+        updateStatus($STATUS['waitForSecondNumberComplete']);
+        $displayNumber = getNumericA();
+        return null;
+      }
+    }
+
+    return null;
   }
+
+  // Status: After Equality
+  if (getStatus() === $STATUS['afterEquality']) {
+    if (is_numeric($userInput)) {
+      updateResult('');
+      updateNumericA(getNumericA() . $userInput);
+      updateStatus($STATUS['waitForFirstNumberComplete']);
+      $displayNumber = getNumericA();
+      return null;
+    }
+
+    if ($userInput === $equality_sign) {
+      $displayNumber = getResult();
+      return null;
+    }
+
+    updateNumericA(floatval(getResult()));
+    updateResult('');
+    if (!isNumberValid(getNumericA())) {
+      updateNumericA('');
+      $displayNumber = 0;
+      return null;
+    }
+
+    foreach($OPERATOR as $operator) {
+      if ($userInput === $operator) {
+        updateOperator($operator);
+        updateStatus($STATUS['waitForSecondNumberComplete']);
+        $displayNumber = getNumericA();
+        return null;
+      }
+    }
+
+    return null;
+  }
+
+
+  $errorMessage = 'Something wrong, please click "C" button to reset settings';
+
+  return null;
 }
-$result = equalityHandler();
+controller();
 ?>
 
 <body>
@@ -159,22 +299,17 @@ $result = equalityHandler();
       <?php echo $errorMessage ?>
     </div>
   <?php endif; ?>
+  <div class="alert alert-dark" role="alert">
+    <?php
+      echo 'Current formula: '.getNumericA().getOperator().getNumericB();
+    ?>
+  </div>
 
   <form class="container mt-3" method="post" action="index.php">
     <div class="row g-3">
       <div class="col">
-        <input 
-          type="text" 
-          name="display" 
-          id="display" 
-          value="<?php
-                  if ($result != null) {
-                    echo $result;
-                  } elseif (isset($_POST['display'])) {
-                    echo trim($_POST['display'] . $_POST['options']);
-                  }
-                ?>" 
-        readonly>
+        <input type="text" name="display" id="display" 
+        value="<?php  echo $displayNumber; ?>" readonly>
       </div>
     </div>
 
@@ -228,7 +363,8 @@ $result = equalityHandler();
 
     <div class="row g-3">
       <div class="col">
-        <a class="btn btn-danger" href="/index.php">C</a>
+        <input type="radio" class="btn-check" name="options" id="reset" value="reset" autocomplete="off" onchange="this.form.submit();">
+        <label class="btn btn-danger" for="reset">C</label>
 
         <input type="radio" class="btn-check" name="options" id="zero" value="0" autocomplete="off" onchange="this.form.submit();">
         <label class="btn btn-secondary" for="zero">0</label>
